@@ -109,7 +109,10 @@ result is deterministic and "reset" is just deleting two files.
 - **Latin** text uses the embedded font when it can be extracted, otherwise a
   built-in Helvetica/Times/Courier face.
 - **Arabic** (including Arabic-Indic digits) is rendered through MuPDF's HTML
-  box, so it is shaped and written right-to-left.
+  box, so it is shaped and written right-to-left. On the reading side, a PDF
+  stores an Arabic line as several glyph runs in visual order; the editor
+  merges those runs into one line, repairs the glyph mapping and shows proper
+  logical Arabic, so the whole line is replaced instead of a single fragment.
 - **Bengali** currently uses a plain text insertion, which does not shape
   conjuncts correctly. See *Known limitations*.
 
@@ -158,6 +161,7 @@ data/
   uploads/<id>/      one folder per document (private, git-ignored)
   assets/            uploaded images (private, git-ignored)
   tessdata/          OCR language data (eng, ara, ben)
+tests/               neutral fixtures + end-to-end smoke test
 start.bat / dev.bat  one-click run scripts
 ```
 
@@ -182,8 +186,15 @@ npm run lint         # eslint
 npm run build        # static export into web/out
 ```
 
-There is no automated test suite yet; the API can be smoke-tested with
-`curl`/`Invoke-WebRequest` against `/api/health` and a probe upload.
+End-to-end smoke test (neutral generated documents, no user data):
+
+```powershell
+api\.venv\Scripts\python.exe tests\make_fixtures.py
+api\.venv\Scripts\python.exe tests\smoke_test.py
+```
+
+It covers vector text, numbers, the OCR path and Arabic line handling. See
+`tests/README.md`.
 
 ---
 
@@ -201,6 +212,9 @@ There is no automated test suite yet; the API can be smoke-tested with
 - **Bengali shaping**: conjuncts are not re-ordered; exported text is correct
   but the glyphs look wrong. Fix is to route Bengali through the HTML box like
   Arabic.
+- **Arabic text layer**: an Arabic line written by the editor is stored by
+  MuPDF in visual glyph order, so copying or searching it in another PDF reader
+  can return the letters in reverse. The editor itself reads it back correctly.
 - **Font fidelity**: if the original font cannot be extracted from the PDF, a
   built-in face is substituted, so replaced text may look slightly different.
   There is no font picker in the UI yet.

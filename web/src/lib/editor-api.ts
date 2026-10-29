@@ -12,6 +12,9 @@ export type Span = {
   ocr?: boolean;
   bold?: boolean;
   confidence?: number;
+  rtl?: boolean;
+  edited?: boolean;
+  fragments?: number;
 };
 
 export type PageImage = {

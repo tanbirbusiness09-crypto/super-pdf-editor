@@ -669,6 +669,7 @@ def _edited_text_spans(ops: list[dict], page_index: int) -> list[dict]:
         ]
         size = max(3.0, float(op.get("size") or 11.0))
         origin = op.get("origin") or [rect[0], rect[3] - size * 0.2]
+        arabic = _has_arabic(text)
         active.append(
             {
                 "text": text,
@@ -678,8 +679,9 @@ def _edited_text_spans(ops: list[dict], page_index: int) -> list[dict]:
                 "size": round(size, 2),
                 "flags": 16 if op.get("bold") else 0,
                 "color": str(op.get("color") or "#111111"),
-                "direction": [1.0, 0.0],
+                "direction": [-1.0, 0.0] if arabic else [1.0, 0.0],
                 "bold": bool(op.get("bold")),
+                "rtl": arabic,
                 "edited": True,
             }
         )

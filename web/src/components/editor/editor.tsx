@@ -1001,6 +1001,14 @@ export default function Editor() {
                     Text
                   </p>
                   <div className="flex min-w-0 items-center gap-2">
+                    {selection.span.rtl && (
+                      <span
+                        className="shrink-0 rounded-full border border-brand-2/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-brand-2"
+                        title="Right-to-left block — the whole line is replaced"
+                      >
+                        RTL
+                      </span>
+                    )}
                     {selection.span.ocr && (
                       <span className="shrink-0 rounded-full border border-brand/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-brand">
                         OCR
@@ -1014,6 +1022,7 @@ export default function Editor() {
                 <textarea
                   ref={textareaRef}
                   value={draft.text}
+                  dir={selection.span.rtl ? "rtl" : "ltr"}
                   onChange={(event) =>
                     setDraft((current) =>
                       current ? { ...current, text: event.target.value } : current,
@@ -1036,7 +1045,9 @@ export default function Editor() {
                     }
                   }}
                   rows={3}
-                  className="w-full resize-y rounded-xl border border-line bg-canvas/70 p-3 text-sm text-ink outline-none transition-colors focus:border-brand/60"
+                  className={`w-full resize-y rounded-xl border border-line bg-canvas/70 p-3 text-sm text-ink outline-none transition-colors focus:border-brand/60 ${
+                    selection.span.rtl ? "text-right" : ""
+                  }`}
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <label className="space-y-1">

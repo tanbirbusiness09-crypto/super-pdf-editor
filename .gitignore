@@ -16,6 +16,9 @@ web/.next/
 web/out/
 *.tsbuildinfo
 
+# ---- generated test fixtures ----
+tests/fixtures/
+
 # ---- local env / logs ----
 *.log
 .env
