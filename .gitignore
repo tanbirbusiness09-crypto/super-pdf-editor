@@ -1,0 +1,28 @@
+# ---- private / user data (never commit) ----
+api/.venv/
+**/__pycache__/
+*.pyc
+data/uploads/*
+!data/uploads/.gitkeep
+data/output/*
+!data/output/.gitkeep
+data/assets/
+data/fonts/
+data/ocr/
+
+# ---- frontend ----
+web/node_modules/
+web/.next/
+web/out/
+*.tsbuildinfo
+
+# ---- local env / logs ----
+*.log
+.env
+.env.local
+
+# ---- editor / OS junk ----
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

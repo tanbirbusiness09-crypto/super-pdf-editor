@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #05070c;
+  --color-panel: #0b111b;
+  --color-panel-2: #101827;
+  --color-line: #1d2839;
+  --color-line-soft: #16202f;
+  --color-ink: #eef2f9;
+  --color-muted: #8b98ad;
+  --color-brand: #6d7cff;
+  --color-brand-2: #22d3ee;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background-image:
+    radial-gradient(60rem 40rem at 15% -10%, rgba(109, 124, 255, 0.16), transparent 60%),
+    radial-gradient(50rem 35rem at 95% 0%, rgba(34, 211, 238, 0.1), transparent 55%);
+  background-repeat: no-repeat;
+}
+
+::selection {
+  background: rgba(109, 124, 255, 0.35);
+}
+
+.grid-surface {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at center, black 35%, transparent 78%);
+}
+
+.text-gradient {
+  background: linear-gradient(100deg, #a5b4ff 0%, #6d7cff 45%, #22d3ee 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.card-glow {
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 24px 60px -30px rgba(0, 0, 0, 0.9);
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  animation: shimmer 1.6s infinite;
+}
