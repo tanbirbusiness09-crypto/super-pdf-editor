@@ -1,0 +1,113 @@
+﻿PDF STUDIO - INSTALL AND RUN (Windows)
+=======================================
+
+বাংলা সারসংক্ষেপ:
+ ১) Python 3.10+ ইনস্টল করুন (ইনস্টলারের সময় "Add python.exe to PATH" টিক দিতে ভুলবেন না)
+ ২) zip ফাইলটা unzip করুন (যেমন Desktop-এ)
+ ৩) install.bat ডাবল-ক্লিক করুন — একবারই লাগবে, ইন্টারনেট দরকার হবে
+ ৪) start.bat ডাবল-ক্লিক করুন — ব্রাউজারে http://127.0.0.1:8000 খুলে যাবে
+ ৫) স্ক্যান করা ছবি/PDF-এ OCR চাইলে Tesseract-ও ইনস্টল করুন (নিচে STEP 4)
+
+Everything runs on this computer. Nothing is uploaded anywhere.
+
+
+REQUIRED
+  - Windows 10 or 11 (64-bit)
+  - Python 3.10 or newer
+
+OPTIONAL
+  - Tesseract OCR  -> read text from scanned pages and photos
+  - Node.js 20+    -> only needed if you edit the interface source (web\src)
+
+
+STEP 1 - INSTALL PYTHON (skip if `py --version` already works)
+  Open PowerShell and run:
+
+    winget install -e --id Python.Python.3.12
+
+  or download from https://www.python.org/downloads/windows/
+  In the installer, tick "Add python.exe to PATH".
+
+  Check it:
+    py -3 --version
+
+
+STEP 2 - INSTALL THE APP DEPENDENCIES
+  The easy way: double-click install.bat
+
+  Or run these commands in PowerShell inside this folder:
+
+    py -3 -m venv api\.venv
+    api\.venv\Scripts\python.exe -m pip install --upgrade pip
+    api\.venv\Scripts\python.exe -m pip install -r api\requirements.txt
+
+  (api\requirements.txt = fastapi, uvicorn, python-multipart, pymupdf, pillow, numpy)
+
+
+STEP 3 - RUN
+  Double-click: start.bat
+  Then open:    http://127.0.0.1:8000
+
+  The pre-built interface is already inside web\out, so Node.js is NOT needed
+  just to use the app.
+
+
+STEP 4 - OPTIONAL: OCR (scanned pages and photos)
+  PowerShell:
+
+    winget install -e --id UB-Mannheim.TesseractOCR
+
+  or installer: https://github.com/UB-Mannheim/tesseract/wiki
+  Default path C:\Program Files\Tesseract-OCR is detected automatically.
+  Language data for English, Arabic and Bengali is already in data\tessdata.
+
+  If Tesseract is installed somewhere else, set the path before start.bat:
+    set PDFS_TESSERACT=C:\path\to\tesseract.exe
+
+
+STEP 5 - OPTIONAL: REBUILD THE INTERFACE (only if you change web\src)
+    winget install -e --id OpenJS.NodeJS.LTS
+    cd web
+    npm install
+    npm run build
+
+  Then restart start.bat. (Rebuilding replaces the files in web\out.)
+
+
+TROUBLESHOOTING
+  "Engine offline" badge / page cannot load
+      The server is not running. Run start.bat and keep its window open.
+
+  Port 8000 already in use
+      Run on another port:
+        api\.venv\Scripts\python.exe -m uvicorn api.main:app --host 127.0.0.1 --port 8001
+      Then open http://127.0.0.1:8001
+
+  pip fails
+      Needs internet once. Behind a proxy:
+        api\.venv\Scripts\python.exe -m pip install -r api\requirements.txt --proxy http://user:pass@host:port
+
+  A scanned file shows no selectable text
+      Tesseract is missing (STEP 4). Install it and reopen the file.
+      The first OCR of a page takes a few seconds, then it is cached.
+
+  Windows blocks the .bat files
+      Right-click -> Properties -> Unblock, or run the commands from STEP 2 by hand.
+
+  Antivirus warning about Python/uvicorn
+      It is a normal local web server on 127.0.0.1; allow it.
+
+
+WHAT IS INSIDE
+    start.bat        run the app (recommended)
+    install.bat      install the Python dependencies (run once)
+    api\             server + PDF engine (Python / FastAPI / PyMuPDF)
+    web\out\         pre-built interface served by the server
+    web\src\         interface source (only for changes)
+    data\tessdata\   OCR language data: English, Arabic, Bengali
+    tests\           optional smoke test (make_fixtures.py + smoke_test.py)
+    README.md        full documentation of the app
+
+PRIVACY
+    The server listens on 127.0.0.1 only. Files stay on this computer.
+    Uploaded documents are stored in data\uploads and can be deleted in the UI.

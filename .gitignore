@@ -19,6 +19,9 @@ web/out/
 # ---- generated test fixtures ----
 tests/fixtures/
 
+# ---- release packages ----
+dist/
+
 # ---- local env / logs ----
 *.log
 .env
