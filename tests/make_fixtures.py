@@ -73,6 +73,40 @@ def build_arabic_letter(path: Path) -> None:
     doc.close()
 
 
+def build_short_spans(path: Path) -> None:
+    """Isolated one-character / one-word spans, the hardest case to select."""
+    doc = pymupdf.open()
+    page = doc.new_page(width=400, height=320)
+    page.insert_text((40, 60), "7", fontsize=14)
+    page.insert_text((40, 100), "42", fontsize=14)
+    page.insert_text((40, 140), "TOTAL", fontsize=14)
+    page.insert_text((40, 180), "Amount 42", fontsize=14)
+    page.insert_text((40, 220), "Total: 7", fontsize=14)
+    page.insert_text((40, 280), "TOTALAMOUNT", fontsize=14)
+    doc.save(path)
+    doc.close()
+
+
+def build_short_ocr(path: Path) -> None:
+    """Scanned-style page with a lone digit and a number next to a word."""
+    image = Image.new("RGB", (760, 460), "white")
+    draw = ImageDraw.Draw(image)
+    draw.text((60, 50), "5", fill="black", font=_font(48))
+    draw.text((60, 140), "PAID", fill="black", font=_font(44))
+    draw.text((60, 240), "TOTAL 7", fill="black", font=_font(44))
+    draw.text((60, 340), "Total: 42", fill="black", font=_font(44))
+    image.save(path)
+
+
+def build_fit_check(path: Path) -> None:
+    """A tight one-letter box, used to check the shrink floor of `fit`."""
+    doc = pymupdf.open()
+    page = doc.new_page(width=300, height=160)
+    page.insert_text((40, 80), "W", fontsize=14)
+    doc.save(path)
+    doc.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -85,7 +119,17 @@ def main() -> None:
     build_invoice(args.out / "invoice.pdf")
     build_receipt(args.out / "receipt.png")
     build_arabic_letter(args.out / "arabic-letter.pdf")
-    for name in ("invoice.pdf", "receipt.png", "arabic-letter.pdf"):
+    build_short_spans(args.out / "short-spans.pdf")
+    build_short_ocr(args.out / "short-ocr.png")
+    build_fit_check(args.out / "fit-check.pdf")
+    for name in (
+        "invoice.pdf",
+        "receipt.png",
+        "arabic-letter.pdf",
+        "short-spans.pdf",
+        "short-ocr.png",
+        "fit-check.pdf",
+    ):
         print(f"wrote {args.out / name}")
 
 

@@ -14,11 +14,17 @@ from PIL import Image, ImageFilter, ImageOps
 
 from .config import DATA_DIR
 
-OCR_VERSION = 3
-OCR_DPI = 220
+OCR_VERSION = 4
+OCR_DPI = 300
 CACHE_DIR = "ocr"
 TESSDATA_DIR = DATA_DIR / "tessdata"
 MIN_CONFIDENCE = 25.0
+# A cluster of one character ("7", "A") is still worth showing, but only when
+# OCR is fairly sure and the glyph has a sane size - that keeps scanner noise
+# out of the editor.
+MIN_SHORT_CONFIDENCE = 50.0
+MIN_HEIGHT_PT = 2.5
+MAX_HEIGHT_PT = 240.0
 LOCK = threading.Lock()
 
 TESSERACT_CANDIDATES = [
@@ -119,6 +125,36 @@ def _parse_tsv(tsv_path: Path, scale: float) -> list[dict]:
     return words
 
 
+NUMERIC_CHARS = set("0123456789٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹.,:/-%٬٫+()")
+
+
+def _is_numeric_word(text: str) -> bool:
+    cleaned = text.strip()
+    return bool(cleaned) and all(char in NUMERIC_CHARS for char in cleaned)
+
+
+def _split_numeric_runs(cluster: list[dict], gap_threshold: float) -> list[list[dict]]:
+    """Keep a number next to its label as its own block.
+
+    OCR happily merges "TOTAL 7" into one cluster. Splitting at the word/number
+    boundary (when a real space separates them) makes the number selectable on
+    its own, which is what an editor needs; words like "COVID19" stay intact
+    because there is no gap at all.
+    """
+    if len(cluster) < 2:
+        return [cluster]
+
+    parts: list[list[dict]] = [[cluster[0]]]
+    for previous, word in zip(cluster, cluster[1:]):
+        gap = word["x0"] - previous["x1"]
+        mixed_kind = _is_numeric_word(previous["text"]) != _is_numeric_word(word["text"])
+        if mixed_kind and gap >= gap_threshold:
+            parts.append([word])
+        else:
+            parts[-1].append(word)
+    return parts
+
+
 def _group_words(words: list[dict]) -> list[dict]:
     if not words:
         return []
@@ -144,7 +180,8 @@ def _group_words(words: list[dict]) -> list[dict]:
 
     spans: list[dict] = []
     median_height = sorted(item["y1"] - item["y0"] for item in words)[len(words) // 2]
-    gap_limit = max(6.5, 0.9 * median_height)
+    gap_limit = max(3.0, 0.5 * median_height)
+    numeric_gap = max(1.5, 0.08 * median_height)
 
     for row in rows:
         row.sort(key=lambda item: item["x0"])
@@ -156,30 +193,37 @@ def _group_words(words: list[dict]) -> list[dict]:
                 clusters[-1].append(word)
 
         for cluster in clusters:
-            rtl = _is_rtl(" ".join(item["text"] for item in cluster))
-            ordered = sorted(cluster, key=lambda item: item["x0"], reverse=rtl)
-            text = _clean_text(" ".join(item["text"] for item in ordered))
-            if len(text) < 2:
-                continue
+            for part in _split_numeric_runs(cluster, numeric_gap):
+                rtl = _is_rtl(" ".join(item["text"] for item in part))
+                ordered = sorted(part, key=lambda item: item["x0"], reverse=rtl)
+                text = _clean_text(" ".join(item["text"] for item in ordered))
+                if not text:
+                    continue
 
-            x0 = min(item["x0"] for item in cluster)
-            y0 = min(item["y0"] for item in cluster)
-            x1 = max(item["x1"] for item in cluster)
-            y1 = max(item["y1"] for item in cluster)
-            heights = sorted(item["y1"] - item["y0"] for item in cluster)
-            height_pt = heights[len(heights) // 2]
-            size = height_pt * (1.0 if rtl else 1.15)
-            confidence = sum(item["confidence"] for item in cluster) / len(cluster)
-            spans.append(
-                {
-                    "text": text,
-                    "bbox": [round(x0, 2), round(y0, 2), round(x1, 2), round(y1, 2)],
-                    "height": height_pt,
-                    "size": max(4.0, min(size, 160.0)),
-                    "confidence": round(confidence, 1),
-                    "rtl": rtl,
-                }
-            )
+                heights = sorted(item["y1"] - item["y0"] for item in part)
+                height_pt = heights[len(heights) // 2]
+                confidence = sum(item["confidence"] for item in part) / len(part)
+                if len(text) < 2:
+                    if confidence < MIN_SHORT_CONFIDENCE:
+                        continue
+                    if not MIN_HEIGHT_PT <= height_pt <= MAX_HEIGHT_PT:
+                        continue
+
+                x0 = min(item["x0"] for item in part)
+                y0 = min(item["y0"] for item in part)
+                x1 = max(item["x1"] for item in part)
+                y1 = max(item["y1"] for item in part)
+                size = height_pt * (1.0 if rtl else 1.15)
+                spans.append(
+                    {
+                        "text": text,
+                        "bbox": [round(x0, 2), round(y0, 2), round(x1, 2), round(y1, 2)],
+                        "height": height_pt,
+                        "size": max(4.0, min(size, 160.0)),
+                        "confidence": round(confidence, 1),
+                        "rtl": rtl,
+                    }
+                )
     return spans
 
 

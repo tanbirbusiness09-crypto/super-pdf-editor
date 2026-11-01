@@ -18,7 +18,7 @@ also serves a pre-built Next.js frontend, so one process on
 | **Numbers & dates** | Same as text — good for invoices, totals, ID-style cards, forms. |
 | **Images** | Replace an image, add a new one, drag it around, resize with corner handles (Shift keeps the aspect ratio), or delete it. |
 | **Erase** | Brush over anything to remove it. For scanned pages a content-aware patch is generated instead of a flat colour box. |
-| **OCR** | Scanned PDFs and photos get selectable text. Ships with English + Arabic + Bengali language data. |
+| **OCR** | Scanned PDFs and photos get selectable text. Ships with English + Arabic + Bengali language data. Lone digits and numbers sitting next to a label are kept as their own editable block. |
 | **Multi-page** | Page thumbnails, page navigation, per-page undo/redo, export the whole document. |
 | **Undo / redo / reset** | Every edit is a JSON operation, so undo is instant and "reset all edits" restores the untouched original. |
 

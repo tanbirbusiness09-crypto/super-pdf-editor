@@ -45,6 +45,10 @@ function rectStyle(rect: number[], zoom: number) {
   };
 }
 
+function rectArea(rect: number[]): number {
+  return Math.max(0, rect[2] - rect[0]) * Math.max(0, rect[3] - rect[1]);
+}
+
 export function spanKey(page: number, span: Span): string {
   return `t:${page}:${span.bbox.join(",")}:${span.text}`;
 }
@@ -322,48 +326,50 @@ export default function PageCanvas({
         );
       })}
 
-      {spans.map((span) => {
-        const key = spanKey(page, span);
-        const selected = selectedKey === key;
-        const dragging = drag?.key === key;
-        return (
-          <div
-            key={key}
-            onClick={(event) => event.stopPropagation()}
-            onPointerDown={(event) => handleSpanPointerDown(event, span, key)}
-            className={`absolute rounded-[2px] border transition-colors ${
-              tool !== "select"
-                ? "pointer-events-none border-transparent"
-                : selected
-                  ? "cursor-move border-brand bg-brand/20"
-                  : "cursor-move border-brand/40 bg-brand/[0.06] hover:border-brand hover:bg-brand/15"
-            }`}
-            style={{
-              ...rectStyle(span.bbox, zoom),
-              transform: dragging
-                ? `translate(${drag.dx * zoom}px, ${drag.dy * zoom}px)`
-                : undefined,
-            }}
-            title={span.text}
-          >
-            {tool === "select" && onEditSpan && (
-              <button
-                type="button"
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onEditSpan(span, key);
-                }}
-                aria-label="Edit text"
-                title="Edit text"
-                className="absolute -right-2 top-1/2 z-20 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-brand/50 bg-panel text-brand shadow-[0_1px_3px_rgba(0,0,0,0.5)] transition-colors hover:bg-brand hover:text-[#05070c]"
-              >
-                <Pencil className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-        );
-      })}
+      {[...spans]
+        .sort((left, right) => rectArea(right.bbox) - rectArea(left.bbox))
+        .map((span) => {
+          const key = spanKey(page, span);
+          const selected = selectedKey === key;
+          const dragging = drag?.key === key;
+          return (
+            <div
+              key={key}
+              onClick={(event) => event.stopPropagation()}
+              onPointerDown={(event) => handleSpanPointerDown(event, span, key)}
+              className={`group absolute rounded-[2px] border transition-colors before:absolute before:-inset-1.5 before:content-[''] ${
+                tool !== "select"
+                  ? "pointer-events-none border-transparent"
+                  : selected
+                    ? "cursor-move border-brand bg-brand/20"
+                    : "cursor-move border-brand/40 bg-brand/[0.06] hover:border-brand hover:bg-brand/15"
+              }`}
+              style={{
+                ...rectStyle(span.bbox, zoom),
+                transform: dragging
+                  ? `translate(${drag.dx * zoom}px, ${drag.dy * zoom}px)`
+                  : undefined,
+              }}
+              title={span.text}
+            >
+              {tool === "select" && onEditSpan && (
+                <button
+                  type="button"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onEditSpan(span, key);
+                  }}
+                  aria-label="Edit text"
+                  title="Edit text"
+                  className="absolute -right-2 top-1/2 z-20 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-brand/50 bg-panel text-brand shadow-[0_1px_3px_rgba(0,0,0,0.5)] transition-colors hover:bg-brand hover:text-[#05070c]"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          );
+        })}
 
       {eraseRect && (
         <div

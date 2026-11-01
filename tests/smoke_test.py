@@ -203,6 +203,113 @@ def check_arabic(api: Api, checks: Checker, fixtures: Path) -> None:
         api.delete(meta["id"])
 
 
+def drawn_size(api: Api, doc_id: str, needle: str) -> float | None:
+    """Size the text was actually written with inside the exported PDF."""
+    import pymupdf
+
+    data = api.export(doc_id)
+    with pymupdf.open(stream=data, filetype="pdf") as doc:
+        for block in doc[0].get_text("dict")["blocks"]:
+            if block.get("type") != 0:
+                continue
+            for line in block["lines"]:
+                for span in line["spans"]:
+                    if needle in span["text"]:
+                        return round(float(span["size"]), 2)
+    return None
+
+
+def check_short_vector(api: Api, checks: Checker, fixtures: Path) -> None:
+    meta = api.upload(fixtures / "short-spans.pdf")
+    try:
+        spans = api.editor(meta["id"])["spans"]
+        texts = [normalized(span["text"]) for span in spans]
+        checks.check(
+            "short vector: one-character span is offered",
+            "7" in texts,
+            f"spans={texts}",
+        )
+        checks.check(
+            "short vector: single-word span is offered",
+            "TOTAL" in texts,
+            f"spans={texts}",
+        )
+
+        digit = next((s for s in spans if normalized(s["text"]) == "7"), None)
+        word = next((s for s in spans if normalized(s["text"]) == "TOTAL"), None)
+        if not digit or not word:
+            return
+
+        api.put_ops(meta["id"], [replace_op(digit, "9"), replace_op(word, "GRAND")])
+        after = [normalized(span["text"]) for span in api.editor(meta["id"])["spans"]]
+        checks.check(
+            "short vector: one-character edit is applied",
+            "9" in after and "7" not in after,
+            f"spans={after}",
+        )
+        checks.check(
+            "short vector: single-word edit is applied",
+            "GRAND" in after and "TOTAL" not in after,
+            f"spans={after}",
+        )
+    finally:
+        api.delete(meta["id"])
+
+
+def check_short_ocr(api: Api, checks: Checker, fixtures: Path) -> None:
+    meta = api.upload(fixtures / "short-ocr.png")
+    try:
+        spans = api.editor(meta["id"])["spans"]
+        if not any(span.get("ocr") for span in spans):
+            checks.skip("short ocr: editable short spans", "no OCR text")
+            return
+
+        texts = [normalized(span["text"]) for span in spans]
+        checks.check(
+            "short ocr: lone digit is detected",
+            "5" in texts,
+            f"spans={texts}",
+        )
+        checks.check(
+            "short ocr: number is split away from its label",
+            "TOTAL" in texts and "7" in texts,
+            f"spans={texts}",
+        )
+
+        target = next((s for s in spans if normalized(s["text"]) == "7"), None)
+        if not target:
+            return
+
+        api.put_ops(meta["id"], ocr_replace_op(target, "9"))
+        after = [normalized(span["text"]) for span in api.editor(meta["id"])["spans"]]
+        checks.check(
+            "short ocr: number edit is applied",
+            "9" in after and "TOTAL" in after,
+            f"spans={after}",
+        )
+    finally:
+        api.delete(meta["id"])
+
+
+def check_fit_floor(api: Api, checks: Checker, fixtures: Path) -> None:
+    meta = api.upload(fixtures / "fit-check.pdf")
+    try:
+        spans = api.editor(meta["id"])["spans"]
+        target = next((s for s in spans if normalized(s["text"]) == "W"), None)
+        if not checks.check("fit: single-letter box exists", target is not None):
+            return
+
+        api.put_ops(meta["id"], [replace_op(target, "WIDE REPLACEMENT TEXT")])
+        size = drawn_size(api, meta["id"], "WIDE")
+        checks.check(
+            "fit: long text keeps a readable size instead of shrinking to 3pt",
+            size is not None and size >= round(target["size"] * 0.74, 2),
+            f"drawn={size} original={target['size']}",
+        )
+    finally:
+        api.delete(meta["id"])
+
+
 def check_receipt(api: Api, checks: Checker, fixtures: Path) -> None:
     meta = api.upload(fixtures / "receipt.png")
     try:
@@ -258,6 +365,9 @@ def main() -> int:
 
     check_invoice(api, checks, fixtures)
     check_arabic(api, checks, fixtures)
+    check_short_vector(api, checks, fixtures)
+    check_short_ocr(api, checks, fixtures)
+    check_fit_floor(api, checks, fixtures)
     check_receipt(api, checks, fixtures)
 
     print(

@@ -27,6 +27,7 @@ WORKING_FILE = "working.pdf"
 OPS_FILE = "ops.json"
 TEMP_FILE = "working.tmp.pdf"
 MAX_OPS = 500
+FIT_FLOOR = 0.75
 
 LOCK = threading.Lock()
 
@@ -170,7 +171,11 @@ def _insert_text(doc: pymupdf.Document, page: pymupdf.Page, op: dict) -> None:
         available = max(1.0, float(bbox[2]) - float(bbox[0]))
         width = _text_width(alias, fontfile, text, size)
         if width and width > available:
-            size = max(3.0, size * available / width)
+            ratio = available / width
+            # Shrinking has a floor: a badly measured embedded font (or a very
+            # long replacement) must not push the text down to 3pt, where it
+            # looks exactly like "the text disappeared".
+            size = max(3.0, size * min(1.0, max(ratio, FIT_FLOOR)))
 
     extra: dict = {}
     if bold and fontfile is not None and not _is_bold_name(font_name):
